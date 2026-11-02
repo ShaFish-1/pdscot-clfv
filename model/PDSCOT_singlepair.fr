@@ -1,0 +1,142 @@
+(* ========================================================================= *)
+(* PDSCOT_singlepair.fr — 单对准 Dirac scotogenic（SM 扩展，与 SM.fr 同次载入）   *)
+(*                                                                            *)
+(* 约定来源：00_Conventions.md §2–§4（与三对版 PDSCOT_Tree.fr 同构，只取第 1 对） *)
+(*   §2: 惰性双态 eta = (etp, (etR + I etI)/Sqrt[2])，Y = 1/2，规范动能标准归一；  *)
+(*       势 V = mu_eta^2 eta†eta + lam2(eta†eta)^2 + lam3(H†H)(eta†eta)         *)
+(*           + lam4(H†eta)(eta†H) + (lam5/2)[(H†eta)^2 + h.c.]；               *)
+(*       物理输入 (MC, MR, MI, lam2, lam3)；导出 lam4/lam5/mu_eta^2：            *)
+(*       lam4 v^2 = MR^2 + MI^2 − 2 MC^2，lam5 v^2 = MR^2 − MI^2，              *)
+(*       mu_eta^2 = MC^2 − lam3 v^2/2。                                        *)
+(*   §3: 两个 Majorana 质量本征态 (pdN1, pdN2) = (n1, p1)，劈裂 ΔM = M_p − M_n； *)
+(*       固定 45° 旋转：H[α,1] = (y_{α1}+ε_{α1})/√2，H[α,2] = i(y_{α1}−ε_{α1})/√2 *)
+(*   §4: L ⊃ −H[α,I] η⁺ (χ̄_I P_L ℓ_α) + H[α,I] η⁰ (χ̄_I P_L ν_α) + h.c.        *)
+(*                                                                            *)
+(* 三对扩展 = 粒子表加 pdN3..pdN6、H 加两列、Yukawa 加两段（结构完全同构）。      *)
+(* 用法: 与 FeynRules 自带 SM.fr 在同一次 LoadModel 中载入（约定 §1）。          *)
+(* ========================================================================= *)
+
+(* ============================ 模型元信息 ============================ *)
+M$ModelName = "PDSCOT_singlepair";
+M$Information = {
+  "Authors" -> {"session"},
+  "Version" -> "1.0",
+  "Date" -> "2026",
+  "Institutions" -> {"—"},
+  "Emails" -> {"—"}
+};
+
+FeynmanGauge = True;
+
+(* ============================ 粒子表 ============================ *)
+
+(* 惰性双态 eta（Y=1/2，电荷 Q = T3 + Y）：分量 (etp, et0)，
+   et0 按 Definitions 展开为 (etR + I etI)/√2 —— 约定 §2 *)
+(* 质量：etp -> MC；etR/etI 是独立自共轭标量，质量 MR/MI（λ5 劈裂在势里给出） *)
+
+F$ClassesDescription = {
+  S[1] == {
+    ClassName -> et,
+    SelfConjugate -> False,
+    Indices -> {Index[SU2W]},
+    Unphysical -> {etp, et0},
+    Definitions -> {et -> {etp, (etR + I etI)/Sqrt[2]}},
+    QuantumNumbers -> {Y -> 1/2},
+    Mass -> {MC, Internal}          (* 双态质量矩阵非对角; 物理质量由势 + Definitions 给出 *)
+  },
+
+  S[2] == {
+    ClassName -> etR,
+    SelfConjugate -> True,
+    Mass -> {MR, 296},
+    Width -> 0
+  },
+
+  S[3] == {
+    ClassName -> etI,
+    SelfConjugate -> True,
+    Mass -> {MI, 211},
+    Width -> 0
+  },
+
+  (* 两个 Majorana 质量本征态 (n1, p1) —— 约定 §3 *)
+  F[4] == {
+    ClassName -> pdN1,
+    SelfConjugate -> True,
+    Mass -> {MN1, 199.9995},
+    Width -> 0
+  },
+
+  F[5] == {
+    ClassName -> pdN2,
+    SelfConjugate -> True,
+    Mass -> {MN1p, 200.0005},
+    Width -> 0
+  }
+};
+
+(* ============================ 参数 ============================ *)
+
+(* 独立输入（约定 §2）：物理标量质量 + lam2/lam3；Yukawa 与 ε（复） *)
+MC   = 225;            (* m(eta±)   [GeV] *)
+MR   = 296;            (* m(etaR)   [GeV] *)
+MI   = 211;            (* m(etaI)   [GeV] *)
+lam2 = 0.1;            (* lambda2 *)
+lam3 = 1.0;            (* lambda3 *)
+
+MN1  = 199.9995;       (* n1 质量 [GeV] *)
+MN1p = 200.0005;       (* p1 质量 [GeV]（劈裂 1 keV）*)
+
+y1e  = 0.4;            (* 对角 y：第 1 对耦合 e 族（Eq.9 一般情形可放开 y1mu/y1ta） *)
+y1mu = 0;
+y1ta = 0;
+
+eps1e  = 2.0927*10^-8 + 1.2079*10^-9 I;   (* ε 复参数（示例值 = S1 的 ε_{α1} 列）*)
+eps1mu = -1.7404*10^-9 - 3.4624*10^-9 I;
+eps1ta = -8.0626*10^-9 - 3.6768*10^-9 I;
+
+(* 导出量（约定 §2）：v = 2 MW SW/EE（SM.fr 的 vev），lam4/lam5/mu_eta^2 *)
+lam4   = (MR^2 + MI^2 - 2 MC^2)/vev^2;
+lam5   = (MR^2 - MI^2)/vev^2;
+mueta2 = MC^2 - lam3 vev^2/2;
+
+(* H 矩阵（约定 §3）：H[α,1] = (y+ε)/√2，H[α,2] = i(y−ε)/√2 —— 复数值 *)
+H[1, 1] = (y1e  + eps1e)/Sqrt[2];  H[1, 2] = I (y1e  - eps1e)/Sqrt[2];
+H[2, 1] = (y1mu + eps1mu)/Sqrt[2]; H[2, 2] = I (y1mu - eps1mu)/Sqrt[2];
+H[3, 1] = (y1ta + eps1ta)/Sqrt[2]; H[3, 2] = I (y1ta - eps1ta)/Sqrt[2];
+
+(* ============================ 拉氏量 ============================ *)
+
+(* 标量势（约定 §2；注意势在 V 里取 + 号 → 拉氏量取 −） *)
+LNewPotential :=
+  -mueta2 (HC[et].et)
+  - lam2 (HC[et].et)^2
+  - lam3 (HC[Phi].Phi) (HC[et].et)
+  - lam4 (HC[Phi].et) (HC[et].Phi)
+  - lam5/2 ((HC[Phi].et)^2 + HC[(HC[Phi].et)^2]);
+
+(* Yukawa（约定 §4）：
+   L ⊃ −H[α,I] η⁺ (χ̄_I P_L ℓ_α) + H[α,I] η⁰ (χ̄_I P_L ν_α) + h.c.
+   FeynRules: Ga[6]=P_L, Ga[7]=P_R；SM.fr 质量本征轻子 e/mu/ta 与中微子 ve/vmu/vta *)
+LNewYukawa := Block[{a, I2},
+  Sum[
+    - H[a, 1] (etp (pdN1bar.Ga[6].e[a]))
+    + H[a, 1] ((etR + I etI)/Sqrt[2] (pdN1bar.Ga[6].ve[a]))
+    - H[a, 2] (etp (pdN2bar.Ga[6].e[a]))
+    + H[a, 2] ((etR + I etI)/Sqrt[2] (pdN2bar.Ga[6].ve[a]))
+    , {a, 3}]
+  + HC[
+      Sum[
+        - H[a, 1] (etp (pdN1bar.Ga[6].e[a]))
+        + H[a, 1] ((etR + I etI)/Sqrt[2] (pdN1bar.Ga[6].ve[a]))
+        - H[a, 2] (etp (pdN2bar.Ga[6].e[a]))
+        + H[a, 2] ((etR + I etI)/Sqrt[2] (pdN2bar.Ga[6].ve[a]))
+        , {a, 3}]
+    ]
+];
+
+(* 动能项：FeynRules 自动生成（约定 §2 要求 η_R/η_I 动能 ½(∂φ)² —— 自共轭标量自动如此）*)
+
+(* ============================ 相互作用阶 ============================ *)
+(* QED 阶（供 FeynArts 排序；数值验证时不影响物理） *)
+F$InteractionOrder = {{QED, 1}};
